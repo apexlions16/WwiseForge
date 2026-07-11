@@ -1,4 +1,4 @@
-name: Geçici v0.1.0 Windows doğrulaması
+name: Geçici v0.1.0 doğrulaması
 
 on:
   pull_request:
@@ -11,16 +11,14 @@ on:
 permissions:
   contents: read
 
-defaults:
-  run:
-    shell: pwsh
-
 jobs:
-  dogrulama:
-    name: Kaynak işlevleri ve yayımlanan EXE doğrulaması
+  kaynak-dogrulama:
+    name: BNK, APK, ayarlar ve ses akışları
     if: github.event.pull_request.head.ref == 'dogrulama-v0.1.0'
-    runs-on: windows-latest
-    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      QT_QPA_PLATFORM: offscreen
 
     steps:
       - name: Kaynak kodu alma
@@ -39,11 +37,19 @@ jobs:
       - name: Python sözdizimini denetleme
         run: python -m py_compile "WwiseForge.py" "dogrulama/v0_1_0_dogrulama.py"
 
-      - name: BNK, APK, ayarlar ve ses akışlarını doğrulama
-        env:
-          QT_QPA_PLATFORM: offscreen
+      - name: Kaynak işlevlerini doğrulama
         run: python "dogrulama/v0_1_0_dogrulama.py"
 
+  exe-dogrulama:
+    name: Yayımlanan Windows EXE açılış doğrulaması
+    if: github.event.pull_request.head.ref == 'dogrulama-v0.1.0'
+    runs-on: windows-2022
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
       - name: Yayımlanan EXE dosyasını indirme
         run: |
           $adres = "https://github.com/apexlions16/WwiseForge/releases/download/v0.1.0/WwiseForge-v0.1.0.exe"
