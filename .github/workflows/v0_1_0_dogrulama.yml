@@ -1,0 +1,67 @@
+name: v0.1.0 Windows doğrulaması
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: pwsh
+
+jobs:
+  dogrulama:
+    name: Kaynak işlevleri ve yayımlanan EXE doğrulaması
+    runs-on: windows-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Kaynak kodu alma
+        uses: actions/checkout@v4
+
+      - name: Python ortamını hazırlama
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Test bağımlılıklarını kurma
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install PySide6
+
+      - name: Python sözdizimini denetleme
+        run: python -m py_compile "WwiseForge.py" "dogrulama/v0_1_0_dogrulama.py"
+
+      - name: BNK, APK, ayarlar ve ses akışlarını doğrulama
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python "dogrulama/v0_1_0_dogrulama.py"
+
+      - name: Yayımlanan EXE dosyasını indirme
+        run: |
+          $adres = "https://github.com/apexlions16/WwiseForge/releases/download/v0.1.0/WwiseForge-v0.1.0.exe"
+          Invoke-WebRequest -Uri $adres -OutFile "WwiseForge-v0.1.0.exe"
+          $dosya = Get-Item "WwiseForge-v0.1.0.exe"
+          if ($dosya.Length -lt 1000000) {
+            throw "Yayımlanan EXE dosyası beklenenden küçük veya eksik."
+          }
+          $baytlar = [System.IO.File]::ReadAllBytes($dosya.FullName)
+          if ($baytlar[0] -ne 0x4D -or $baytlar[1] -ne 0x5A) {
+            throw "Yayımlanan dosya geçerli bir Windows PE çalıştırılabilir dosyası değil."
+          }
+          Write-Host "EXE dosyası indirildi ve PE başlığı doğrulandı: $($dosya.Length) bayt"
+
+      - name: Yayımlanan EXE açılış duman testi
+        run: |
+          $surec = Start-Process -FilePath ".\WwiseForge-v0.1.0.exe" -PassThru
+          Start-Sleep -Seconds 12
+          $surec.Refresh()
+          if ($surec.HasExited) {
+            throw "WwiseForge-v0.1.0.exe açılıştan sonra beklenmedik biçimde kapandı. Çıkış kodu: $($surec.ExitCode)"
+          }
+          Stop-Process -Id $surec.Id -Force
+          Write-Host "EXE en az 12 saniye çalıştı ve açılışta çökmedi."
