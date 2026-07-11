@@ -48,6 +48,7 @@ jobs:
 
       - name: Kaynak işlevlerini doğrulama
         run: |
+          $env:PYTHONPATH = (Get-Location).Path
           python "dogrulama/v0_1_0_dogrulama_v2.py" *> "dogrulama_sonucu.txt"
           $kod = $LASTEXITCODE
           Get-Content "dogrulama_sonucu.txt"
