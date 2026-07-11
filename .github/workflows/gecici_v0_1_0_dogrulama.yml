@@ -11,6 +11,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: v0-1-0-dogrulama-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   kaynak-dogrulama:
     name: BNK, APK, ayarlar ve ses akışları
