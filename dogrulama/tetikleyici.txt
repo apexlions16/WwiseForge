@@ -1,0 +1,1 @@
+Bu dosya yalnızca v0.1.0 doğrulama çekme isteğinin Windows iş akışını başlatmak için kullanılır.
