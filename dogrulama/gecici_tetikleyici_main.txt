@@ -1,0 +1,1 @@
+Bu dosya, v0.1.0 kaynak ve Windows EXE doğrulamasını bir kez başlatmak için kullanılır.
