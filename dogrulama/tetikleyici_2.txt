@@ -1,0 +1,1 @@
+Bu dosya, geçici Windows doğrulama iş akışını tetiklemek için kullanılır.
