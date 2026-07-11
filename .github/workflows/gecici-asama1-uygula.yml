@@ -1,0 +1,57 @@
+name: Geçici Aşama 1 uygulama ve doğrulama
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/asama1_tetikle"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gecici-asama1-uygula
+  cancel-in-progress: true
+
+jobs:
+  uygula-ve-dogrula:
+    name: Aşama 1 güncellemesini uygula ve doğrula
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      PYTHONUTF8: "1"
+      QT_QPA_PLATFORM: offscreen
+
+    steps:
+      - name: Geliştirme dalını al
+        uses: actions/checkout@v4
+        with:
+          ref: agent/asama-1-guvenli-duzenleme
+          fetch-depth: 0
+
+      - name: Python ortamını hazırla
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Aşama 1 güncellemesini uygula
+        run: python ".github/guncellemeler/asama1_guncelle.py"
+
+      - name: Bağımlılıkları kur
+        run: python -m pip install --upgrade pip PySide6
+
+      - name: Sözdizimini denetle
+        run: python -m py_compile "WwiseForge.py" "wwiseforge_yollar.py" "testler/test_asama1.py"
+
+      - name: Aşama 1 otomatik testlerini çalıştır
+        run: python -m unittest -v testler.test_asama1
+
+      - name: Doğrulanan değişiklikleri geliştirme dalına kaydet
+        run: |
+          git config user.name "WwiseForge Otomasyonu"
+          git config user.email "actions@users.noreply.github.com"
+          Remove-Item ".github/guncellemeler/asama1_guncelle.py" -Force
+          git add "WwiseForge.py" "README.md" "wwiseforge_yollar.py" "testler/test_asama1.py" ".github/guncellemeler/asama1_guncelle.py"
+          git commit -m "Aşama 1 güvenli düzenleme ve klasör yönetimi"
+          git push origin HEAD:agent/asama-1-guvenli-duzenleme
