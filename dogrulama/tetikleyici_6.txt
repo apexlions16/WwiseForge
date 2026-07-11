@@ -1,0 +1,1 @@
+Yeni artifact raporlu doğrulama iş akışı kayda alındıktan sonraki tetikleyicidir.
