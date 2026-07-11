@@ -23,6 +23,8 @@ jobs:
     timeout-minutes: 15
     env:
       QT_QPA_PLATFORM: offscreen
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: utf-8
     defaults:
       run:
         shell: pwsh
@@ -51,7 +53,7 @@ jobs:
           $env:PYTHONPATH = (Get-Location).Path
           python "dogrulama/v0_1_0_dogrulama_v2.py" *> "dogrulama_sonucu.txt"
           $kod = $LASTEXITCODE
-          Get-Content "dogrulama_sonucu.txt"
+          Get-Content "dogrulama_sonucu.txt" -Encoding utf8
           if ($kod -ne 0) {
             exit $kod
           }
