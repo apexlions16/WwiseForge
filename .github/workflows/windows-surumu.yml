@@ -38,36 +38,10 @@ jobs:
 
       - name: Aşama 0 kaynak güncellemesini uygulama
         run: |
-          python ".github/guncellemeler/asama0_guncelle.py"
-          python -m py_compile "WwiseForge.py"
-
-      - name: Kalıcı kaynak güncellemesini kaydetme
-        run: |
-          $isAkisi = ".github/workflows/windows-surumu.yml"
-          $icerik = Get-Content -Path $isAkisi -Raw
-          $guncelIcerik = [regex]::Replace(
-            $icerik,
-            '(?ms)^  pull_request:\r?\n    types: \[synchronize, reopened\]\r?\n|^  schedule:\r?\n    - cron: "\*/5 \* \* \* \*"\r?\n',
-            ''
-          )
-          Set-Content -Path $isAkisi -Value $guncelIcerik -Encoding utf8
-
-          Remove-Item ".github/guncellemeler/asama0_guncelle.py"
-          if (Test-Path ".github/guncellemeler" -PathType Container) {
-            $kalan = Get-ChildItem ".github/guncellemeler" -Force
-            if ($kalan.Count -eq 0) {
-              Remove-Item ".github/guncellemeler"
-            }
+          if (Test-Path ".github/guncellemeler/asama0_guncelle.py") {
+            python ".github/guncellemeler/asama0_guncelle.py"
           }
-
-          git config user.name "WwiseForge Yayın Botu"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "Aşama 0 yayın altyapısını tamamla"
-          git push origin HEAD:main
-
-          $hedefSha = git rev-parse HEAD
-          "HEDEF_SHA=$hedefSha" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          python -m py_compile "WwiseForge.py"
 
       - name: Sürüm bilgisini okuma
         run: |
@@ -80,33 +54,27 @@ jobs:
           "SURUM=$surum" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "Sürüm bilgisi okundu: $surum"
 
-      - name: Sürümün daha önce yayımlanıp yayımlanmadığını denetleme
+      - name: Mevcut sürümü sorgulama
+        id: surum_denetimi
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view "v$env:SURUM" --repo $env:GITHUB_REPOSITORY *> $null
-          if ($LASTEXITCODE -eq 0) {
-            "YAYIN_VAR=true" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-            "v$env:SURUM sürümü daha önce yayımlanmış. Yeniden derleme yapılmayacak."
-          }
-          else {
-            "YAYIN_VAR=false" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-            "v$env:SURUM sürümü için yeni yayın hazırlanacak."
-          }
+          gh release view "v$env:SURUM" --repo $env:GITHUB_REPOSITORY
 
       - name: Derleme araçlarını kurma
-        if: env.YAYIN_VAR != 'true'
+        if: steps.surum_denetimi.outcome != 'success'
         run: |
           python -m pip install --upgrade pip
           python -m pip install PySide6 PyInstaller
 
       - name: Python sözdizimini yeniden denetleme
-        if: env.YAYIN_VAR != 'true'
+        if: steps.surum_denetimi.outcome != 'success'
         run: |
           python -m py_compile WwiseForge.py
 
       - name: Windows EXE dosyasını oluşturma
-        if: env.YAYIN_VAR != 'true'
+        if: steps.surum_denetimi.outcome != 'success'
         run: |
           python -m PyInstaller `
             --noconfirm `
@@ -122,7 +90,7 @@ jobs:
           }
 
       - name: Türkçe sürüm notlarını hazırlama
-        if: env.YAYIN_VAR != 'true'
+        if: steps.surum_denetimi.outcome != 'success'
         run: |
           @"
           ## WwiseForge v$env:SURUM
@@ -147,13 +115,13 @@ jobs:
           "@ | Set-Content -Path "surum-notlari.md" -Encoding utf8
 
       - name: GitHub sürümünü yayımlama
-        if: env.YAYIN_VAR != 'true'
+        if: steps.surum_denetimi.outcome != 'success'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "v$env:SURUM" `
             "dist/WwiseForge-v$env:SURUM.exe" `
             --repo $env:GITHUB_REPOSITORY `
-            --target $env:HEDEF_SHA `
+            --target main `
             --title "WwiseForge v$env:SURUM — İlk test sürümü" `
             --notes-file "surum-notlari.md"
