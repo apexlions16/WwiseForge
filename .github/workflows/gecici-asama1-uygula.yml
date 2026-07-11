@@ -1,6 +1,13 @@
 name: Geçici Aşama 1 uygulama ve doğrulama
 
 on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
   push:
     branches:
       - main
@@ -17,6 +24,7 @@ concurrency:
 jobs:
   uygula-ve-dogrula:
     name: Aşama 1 güncellemesini uygula ve doğrula
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.ref == 'agent/asama-1-guvenli-duzenleme'
     runs-on: windows-latest
     timeout-minutes: 30
     env:
@@ -36,7 +44,12 @@ jobs:
           python-version: "3.12"
 
       - name: Aşama 1 güncellemesini uygula
-        run: python ".github/guncellemeler/asama1_guncelle.py"
+        run: |
+          if (Test-Path ".github/guncellemeler/asama1_guncelle.py") {
+            python ".github/guncellemeler/asama1_guncelle.py"
+          } else {
+            Write-Host "Güncelleme betiği daha önce uygulanmış."
+          }
 
       - name: Bağımlılıkları kur
         run: python -m pip install --upgrade pip PySide6
@@ -51,7 +64,13 @@ jobs:
         run: |
           git config user.name "WwiseForge Otomasyonu"
           git config user.email "actions@users.noreply.github.com"
-          Remove-Item ".github/guncellemeler/asama1_guncelle.py" -Force
+          if (Test-Path ".github/guncellemeler/asama1_guncelle.py") {
+            Remove-Item ".github/guncellemeler/asama1_guncelle.py" -Force
+          }
           git add "WwiseForge.py" "README.md" "wwiseforge_yollar.py" "testler/test_asama1.py" ".github/guncellemeler/asama1_guncelle.py"
-          git commit -m "Aşama 1 güvenli düzenleme ve klasör yönetimi"
-          git push origin HEAD:agent/asama-1-guvenli-duzenleme
+          if (-not (git diff --cached --quiet)) {
+            git commit -m "Aşama 1 güvenli düzenleme ve klasör yönetimi"
+            git push origin HEAD:agent/asama-1-guvenli-duzenleme
+          } else {
+            Write-Host "Kaydedilecek yeni değişiklik yok."
+          }
