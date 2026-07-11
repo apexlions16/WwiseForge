@@ -1,32 +1,33 @@
 name: Geçici v0.1.0 doğrulaması
 
 on:
-  pull_request:
+  push:
     branches:
       - main
-    types:
-      - synchronize
-      - reopened
+    paths:
+      - dogrulama/gecici_tetikleyici_main.txt
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: v0-1-0-dogrulama-${{ github.event.pull_request.number }}
+  group: v0-1-0-dogrulama-tek
   cancel-in-progress: true
 
 jobs:
   kaynak-dogrulama:
     name: BNK, APK, ayarlar ve ses akışları
-    if: github.event.pull_request.head.ref == 'dogrulama-v0.1.0'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
       QT_QPA_PLATFORM: offscreen
 
     steps:
-      - name: Kaynak kodu alma
+      - name: Doğrulama dalını alma
         uses: actions/checkout@v4
+        with:
+          ref: dogrulama-v0.1.0
 
       - name: Python ortamını hazırlama
         uses: actions/setup-python@v5
@@ -46,7 +47,6 @@ jobs:
 
   exe-dogrulama:
     name: Yayımlanan Windows EXE açılış doğrulaması
-    if: github.event.pull_request.head.ref == 'dogrulama-v0.1.0'
     runs-on: windows-2022
     timeout-minutes: 15
     defaults:
