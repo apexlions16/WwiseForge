@@ -1,0 +1,1 @@
+Windows konsolu UTF-8 olarak ayarlanan doğrulama koşusunu başlatmak için kullanılır.
