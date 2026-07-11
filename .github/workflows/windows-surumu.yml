@@ -2,6 +2,7 @@ name: Windows sürümü oluşturma
 
 on:
   workflow_dispatch:
+  create:
   push:
     tags:
       - "v*"
@@ -46,7 +47,7 @@ jobs:
           $icerik = Get-Content -Path $isAkisi -Raw
           $guncelIcerik = [regex]::Replace(
             $icerik,
-            '(?ms)^  schedule:\r?\n    - cron: "\*/5 \* \* \* \*"\r?\n',
+            '(?ms)^  create:\r?\n|^  schedule:\r?\n    - cron: "\*/5 \* \* \* \*"\r?\n',
             ''
           )
           Set-Content -Path $isAkisi -Value $guncelIcerik -Encoding utf8
