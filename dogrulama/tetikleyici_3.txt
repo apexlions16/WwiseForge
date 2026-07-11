@@ -1,0 +1,1 @@
+Geçici doğrulama iş akışı kayda alındıktan sonra gönderilen ikinci tetikleyicidir.
