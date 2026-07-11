@@ -2,10 +2,9 @@ name: Windows sürümü oluşturma
 
 on:
   workflow_dispatch:
-  pull_request:
-    types: [synchronize, reopened]
-  schedule:
-    - cron: "*/5 * * * *"
+  push:
+    tags:
+      - "v*"
 
 permissions:
   contents: write
@@ -21,7 +20,6 @@ concurrency:
 jobs:
   windows-surumu:
     name: Windows EXE oluşturma ve yayımlama
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.ref == 'asama-0-yayin-tetikleyici'
     runs-on: windows-latest
 
     steps:
@@ -29,36 +27,16 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: main
 
       - name: Python ortamını hazırlama
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Aşama 0 kaynak güncellemesini uygulama
+      - name: Sürüm bilgisini ve Python sözdizimini denetleme
         run: |
-          if (Test-Path ".github/guncellemeler/asama0_guncelle.py") {
-            python ".github/guncellemeler/asama0_guncelle.py"
-          }
           python -m py_compile "WwiseForge.py"
 
-      - name: Kaynak ve README değişikliklerini kaydetme
-        run: |
-          $degisiklikler = git status --porcelain -- "WwiseForge.py" "README.md"
-          if ($degisiklikler) {
-            git config user.name "WwiseForge Yayın Botu"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add "WwiseForge.py" "README.md"
-            git commit -m "Aşama 0 sürüm bilgisi ve README güncellemesi"
-            git push origin HEAD:main
-          }
-          else {
-            "Kaynak ve README zaten güncel."
-          }
-
-      - name: Sürüm bilgisini okuma
-        run: |
           $eslesme = Select-String -Path "WwiseForge.py" -Pattern '^UYGULAMA_SURUMU = "([^"]+)"$'
           if (-not $eslesme) {
             throw "Kaynak kodda uygulama sürümü bulunamadı."
@@ -66,7 +44,7 @@ jobs:
 
           $surum = $eslesme.Matches[0].Groups[1].Value
           "SURUM=$surum" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          "Sürüm bilgisi okundu: $surum"
+          "Sürüm bilgisi doğrulandı: $surum"
 
       - name: Mevcut sürümü sorgulama
         id: surum_denetimi
@@ -81,11 +59,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install PySide6 PyInstaller
-
-      - name: Python sözdizimini yeniden denetleme
-        if: steps.surum_denetimi.outcome != 'success'
-        run: |
-          python -m py_compile WwiseForge.py
 
       - name: Windows EXE dosyasını oluşturma
         if: steps.surum_denetimi.outcome != 'success'
@@ -109,7 +82,7 @@ jobs:
           @"
           ## WwiseForge v$env:SURUM
 
-          Bu sürüm, WwiseForge uygulamasının ilk Windows test sürümüdür.
+          Bu sürüm, WwiseForge uygulamasının Windows test sürümüdür.
 
           ### Bu sürümde
 
@@ -136,6 +109,6 @@ jobs:
           gh release create "v$env:SURUM" `
             "dist/WwiseForge-v$env:SURUM.exe" `
             --repo $env:GITHUB_REPOSITORY `
-            --target main `
-            --title "WwiseForge v$env:SURUM — İlk test sürümü" `
+            --target $env:GITHUB_SHA `
+            --title "WwiseForge v$env:SURUM — Test sürümü" `
             --notes-file "surum-notlari.md"
