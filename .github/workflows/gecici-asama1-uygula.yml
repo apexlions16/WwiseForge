@@ -46,9 +46,27 @@ jobs:
       - name: Aşama 1 güncellemesini uygula
         run: |
           if (Test-Path ".github/guncellemeler/asama1_guncelle.py") {
-            python ".github/guncellemeler/asama1_guncelle.py"
+            python ".github/guncellemeler/asama1_guncelle.py" *>&1 | Tee-Object -FilePath "asama1_guncelleme_raporu.txt"
+            "GUNCELLEME_CIKIS_KODU=$LASTEXITCODE" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           } else {
-            Write-Host "Güncelleme betiği daha önce uygulanmış."
+            "Güncelleme betiği daha önce uygulanmış." | Tee-Object -FilePath "asama1_guncelleme_raporu.txt"
+            "GUNCELLEME_CIKIS_KODU=0" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          }
+          exit 0
+
+      - name: Güncelleme raporunu sakla
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: asama1-guncelleme-raporu
+          path: asama1_guncelleme_raporu.txt
+          if-no-files-found: error
+
+      - name: Güncelleme sonucunu denetle
+        run: |
+          if ($env:GUNCELLEME_CIKIS_KODU -ne "0") {
+            Get-Content "asama1_guncelleme_raporu.txt"
+            throw "Aşama 1 güncelleme betiği başarısız oldu."
           }
 
       - name: Bağımlılıkları kur
