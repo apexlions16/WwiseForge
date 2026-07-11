@@ -3,9 +3,9 @@
 # ---------------------------------------------------------------------------
 #
 # PyInstaller ile EXE oluşturma komutu:
-# pyinstaller --noconsole --onefile --icon=simge.ico "WwiseForge.py"
+# python -m PyInstaller --noconfirm --clean --onefile --windowed --name "WwiseForge-v0.1.0" "WwiseForge.py"
 #
-# (Not: "simge.ico" dosyasının proje klasöründe olduğundan emin olun.)
+# İsteğe bağlı uygulama simgesi için "simge.ico" proje klasörüne eklenebilir.
 # ---------------------------------------------------------------------------
 
 import sys
@@ -30,6 +30,9 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
 from PySide6.QtCore import Qt, QSettings, QUrl, QTime, QSize, QByteArray
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
 from PySide6.QtGui import QAction, QIcon, QColor, QBrush, QFont, QTextCursor
+
+UYGULAMA_ADI = "WwiseForge"
+UYGULAMA_SURUMU = "0.1.0"
 
 # ---------------------------------------------------------------------------
 # 1. VERİ YAPILARI VE AYRIŞTIRMA MANTIĞI (ARKA UÇ)
@@ -402,7 +405,7 @@ class HexEditorDialog(QDialog):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("WwiseForge - Çoklu BNK/APK Düzenleyici")
+        self.setWindowTitle(f"{UYGULAMA_ADI} v{UYGULAMA_SURUMU} - Çoklu BNK/APK Düzenleyici")
         self.resize(1100, 900)
         
         # PENCERE VE UYGULAMA İKONU
@@ -574,7 +577,7 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(action_group)
         
         self.status_bar = self.statusBar()
-        self.status_bar.showMessage("Hazır")
+        self.status_bar.showMessage(f"Hazır — Sürüm {UYGULAMA_SURUMU}")
 
     # -----------------------------------------------------------------------
     # YEDEKLEME ve FİLTRE MANTIĞI
@@ -1247,6 +1250,8 @@ class MainWindow(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    app.setApplicationName(UYGULAMA_ADI)
+    app.setApplicationVersion(UYGULAMA_SURUMU)
     app.setStyle("Fusion")
     app.setWindowIcon(QIcon("simge.ico"))
     window = MainWindow()
