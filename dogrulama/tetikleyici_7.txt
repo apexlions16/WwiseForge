@@ -1,0 +1,1 @@
+Proje modül yolu düzeltilen Windows doğrulamasını başlatmak için kullanılır.
