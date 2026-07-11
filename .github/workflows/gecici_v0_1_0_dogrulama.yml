@@ -31,14 +31,14 @@ jobs:
 
       - name: Test bağımlılıklarını kurma
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install PySide6
+          python -m pip install --upgrade pip --quiet
+          python -m pip install PySide6 --quiet
 
       - name: Python sözdizimini denetleme
-        run: python -m py_compile "WwiseForge.py" "dogrulama/v0_1_0_dogrulama.py"
+        run: python -m py_compile "WwiseForge.py" "dogrulama/v0_1_0_dogrulama_v2.py"
 
       - name: Kaynak işlevlerini doğrulama
-        run: python "dogrulama/v0_1_0_dogrulama.py"
+        run: python "dogrulama/v0_1_0_dogrulama_v2.py"
 
   exe-dogrulama:
     name: Yayımlanan Windows EXE açılış doğrulaması
