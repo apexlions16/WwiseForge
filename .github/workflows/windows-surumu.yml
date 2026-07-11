@@ -43,6 +43,20 @@ jobs:
           }
           python -m py_compile "WwiseForge.py"
 
+      - name: Kaynak ve README değişikliklerini kaydetme
+        run: |
+          $degisiklikler = git status --porcelain -- "WwiseForge.py" "README.md"
+          if ($degisiklikler) {
+            git config user.name "WwiseForge Yayın Botu"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add "WwiseForge.py" "README.md"
+            git commit -m "Aşama 0 sürüm bilgisi ve README güncellemesi"
+            git push origin HEAD:main
+          }
+          else {
+            "Kaynak ve README zaten güncel."
+          }
+
       - name: Sürüm bilgisini okuma
         run: |
           $eslesme = Select-String -Path "WwiseForge.py" -Pattern '^UYGULAMA_SURUMU = "([^"]+)"$'
