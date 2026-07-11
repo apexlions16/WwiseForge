@@ -1,12 +1,12 @@
 name: Geçici v0.1.0 doğrulaması
 
 on:
-  push:
+  pull_request:
     branches:
       - main
-    paths:
-      - dogrulama/gecici_tetikleyici_main.txt
-  workflow_dispatch:
+    types:
+      - synchronize
+      - reopened
 
 permissions:
   contents: read
@@ -18,10 +18,14 @@ concurrency:
 jobs:
   kaynak-dogrulama:
     name: BNK, APK, ayarlar ve ses akışları
-    runs-on: ubuntu-latest
+    if: github.event.pull_request.head.ref == 'dogrulama-v0.1.0'
+    runs-on: windows-2022
     timeout-minutes: 15
     env:
       QT_QPA_PLATFORM: offscreen
+    defaults:
+      run:
+        shell: pwsh
 
     steps:
       - name: Doğrulama dalını alma
@@ -43,10 +47,25 @@ jobs:
         run: python -m py_compile "WwiseForge.py" "dogrulama/v0_1_0_dogrulama_v2.py"
 
       - name: Kaynak işlevlerini doğrulama
-        run: python "dogrulama/v0_1_0_dogrulama_v2.py"
+        run: |
+          python "dogrulama/v0_1_0_dogrulama_v2.py" *> "dogrulama_sonucu.txt"
+          $kod = $LASTEXITCODE
+          Get-Content "dogrulama_sonucu.txt"
+          if ($kod -ne 0) {
+            exit $kod
+          }
+
+      - name: Kaynak doğrulama raporunu saklama
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kaynak-dogrulama-raporu
+          path: dogrulama_sonucu.txt
+          if-no-files-found: error
 
   exe-dogrulama:
     name: Yayımlanan Windows EXE açılış doğrulaması
+    if: github.event.pull_request.head.ref == 'dogrulama-v0.1.0'
     runs-on: windows-2022
     timeout-minutes: 15
     defaults:
