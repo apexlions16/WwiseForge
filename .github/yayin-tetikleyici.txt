@@ -2,3 +2,4 @@ Bu dosya, Aşama 0 Windows yayın iş akışını bir kez başlatmak için oluş
 
 Standart çekme isteği tetikleyicisi etkinleştirildi.
 Sürüm denetimi düzeltmesinden sonra ikinci Windows derlemesi başlatıldı.
+Kaynak kod ve README kalıcı olarak ana dala kaydediliyor.
