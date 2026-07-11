@@ -1,11 +1,11 @@
 # ---------------------------------------------------------------------------
-# Wwise BNK/APK Editor
+# Wwise BNK/APK Düzenleyici
 # ---------------------------------------------------------------------------
 #
 # PyInstaller ile EXE oluşturma komutu:
-# pyinstaller --noconsole --onefile --icon=icon.ico "WwiseForge.py"
+# pyinstaller --noconsole --onefile --icon=simge.ico "WwiseForge.py"
 #
-# (Not: "icon.ico" dosyasının proje klasöründe olduğundan emin olun.)
+# (Not: "simge.ico" dosyasının proje klasöründe olduğundan emin olun.)
 # ---------------------------------------------------------------------------
 
 import sys
@@ -32,7 +32,7 @@ from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
 from PySide6.QtGui import QAction, QIcon, QColor, QBrush, QFont, QTextCursor
 
 # ---------------------------------------------------------------------------
-# 1. VERİ YAPILARI VE PARSING MANTIĞI (BACKEND)
+# 1. VERİ YAPILARI VE AYRIŞTIRMA MANTIĞI (ARKA UÇ)
 # ---------------------------------------------------------------------------
 
 class WemEntry:
@@ -72,7 +72,7 @@ class BnkParser:
         didx_chunk = None
         data_chunk_payload = None
         
-        # Basit Chunk Parsing (RIFF stili)
+        # Basit parça ayrıştırma (RIFF biçimi)
         while offset < file_size:
             if offset + 8 > file_size:
                 break
@@ -101,7 +101,7 @@ class BnkParser:
         if didx_chunk and data_chunk_payload:
             self._parse_wems(didx_chunk, data_chunk_payload)
         else:
-            raise ValueError(f"{self.filename}: Geçersiz BNK veya DIDX/DATA chunk bulunamadı.")
+            raise ValueError(f"{self.filename}: Geçersiz BNK dosyası veya DIDX/DATA parçası bulunamadı.")
 
     def _parse_wems(self, didx_payload: bytes, data_payload: bytes):
         num_entries = len(didx_payload) // 12
@@ -113,7 +113,7 @@ class BnkParser:
                 wem_data = data_payload[w_offset : w_offset + w_size]
                 self.wem_list.append(WemEntry(w_id, w_offset, w_size, wem_data))
             else:
-                print(f"Uyarı: WEM ID {w_id} sınır dışı veriye işaret ediyor.")
+                print(f"Uyarı: WEM kimliği {w_id} sınır dışı veriye işaret ediyor.")
 
     def replace_wem(self, wem_id: int, new_data: bytes) -> bool:
         for entry in self.wem_list:
@@ -153,7 +153,7 @@ class BnkParser:
                 f.write(chunk)
 
 # ---------------------------------------------------------------------------
-# 2. APK EXTRACTOR & REPACKER
+# 2. APK ÇIKARICI VE YENİDEN PAKETLEYİCİ
 # ---------------------------------------------------------------------------
 
 class ApkExtractor:
@@ -172,7 +172,7 @@ class ApkExtractor:
         entries = []
         with open(apk_path, "rb") as f:
             head = f.read(8)
-            if len(head) < 8: raise ValueError("Geçersiz APK header.")
+            if len(head) < 8: raise ValueError("Geçersiz APK başlığı.")
             files_count = ApkExtractor.U32.unpack_from(head, 0)[0]
             dummy_val = ApkExtractor.U32.unpack_from(head, 4)[0]
             table_size = files_count * ApkExtractor.ENTRY.size
@@ -228,12 +228,12 @@ class ApkExtractor:
             if f.tell() < data_start: f.write(b"\x00" * (data_start - f.tell()))
             for fid, off, size, path in items:
                 if f.tell() < off: f.write(b"\x00" * (off - f.tell()))
-                elif f.tell() > off: raise RuntimeError("Alignment hatası!")
+                elif f.tell() > off: raise RuntimeError("Hizalama hatası!")
                 with open(path, "rb") as bf: f.write(bf.read())
         return len(files), out_apk_path
 
 # ---------------------------------------------------------------------------
-# 3. YARDIMCI DIALOGLAR (LOG, HEX, SETTINGS)
+# 3. YARDIMCI PENCERELER (GÜNLÜK, ONALTILIK, AYARLAR)
 # ---------------------------------------------------------------------------
 
 class LogResultDialog(QDialog):
@@ -252,19 +252,19 @@ class LogResultDialog(QDialog):
         layout.addWidget(btn_close)
 
 class SettingsDialog(QDialog):
-    """VGMStream ve Backup ayarları için dialog."""
+    """VGMStream ve yedekleme ayarları için pencere."""
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Ayarlar")
         self.resize(400, 250)
         
-        self.settings = QSettings("MyCompany", "WwiseBnkEditor")
+        self.settings = QSettings("WwiseForge", "WwiseForge")
         
         layout = QFormLayout(self)
         
-        # VGM Path
+        # VGMStream yolu
         self.txt_vgm = QLineEdit()
-        self.txt_vgm.setText(self.settings.value("vgmstream_path", ""))
+        self.txt_vgm.setText(self.settings.value("vgmstream_yolu", ""))
         btn_vgm = QPushButton("Seç")
         btn_vgm.clicked.connect(self.select_vgm)
         
@@ -273,19 +273,19 @@ class SettingsDialog(QDialog):
         row_vgm.addWidget(btn_vgm)
         layout.addRow("VGMStream CLI:", row_vgm)
         
-        # Backup Count
+        # Yedek sayısı
         self.spin_count = QSpinBox()
         self.spin_count.setRange(1, 50)
-        self.spin_count.setValue(int(self.settings.value("backup_count", 3)))
+        self.spin_count.setValue(int(self.settings.value("yedek_sayisi", 3)))
         layout.addRow("Maks. Yedek Sayısı:", self.spin_count)
         
-        # Backup Age
+        # Yedek yaşı
         self.spin_age = QSpinBox()
         self.spin_age.setRange(1, 365)
-        self.spin_age.setValue(int(self.settings.value("backup_age", 7)))
+        self.spin_age.setValue(int(self.settings.value("yedek_yasi", 7)))
         layout.addRow("Maks. Yedek Yaşı (Gün):", self.spin_age)
         
-        # Buttons
+        # Düğmeler
         btn_box = QHBoxLayout()
         btn_save = QPushButton("Kaydet")
         btn_save.clicked.connect(self.save_settings)
@@ -297,20 +297,20 @@ class SettingsDialog(QDialog):
         layout.addRow(btn_box)
 
     def select_vgm(self):
-        path, _ = QFileDialog.getOpenFileName(self, "VGMStream Seç", "", "Executable (*.exe);;All Files (*)")
+        path, _ = QFileDialog.getOpenFileName(self, "VGMStream Seç", "", "Çalıştırılabilir dosya (*.exe);;Tüm dosyalar (*)")
         if path: self.txt_vgm.setText(path)
 
     def save_settings(self):
-        self.settings.setValue("vgmstream_path", self.txt_vgm.text())
-        self.settings.setValue("backup_count", self.spin_count.value())
-        self.settings.setValue("backup_age", self.spin_age.value())
+        self.settings.setValue("vgmstream_yolu", self.txt_vgm.text())
+        self.settings.setValue("yedek_sayisi", self.spin_count.value())
+        self.settings.setValue("yedek_yasi", self.spin_age.value())
         self.accept()
 
 class HexEditorDialog(QDialog):
     def __init__(self, wem_entry: WemEntry, parent=None):
         super().__init__(parent)
         self.entry = wem_entry
-        self.setWindowTitle(f"Hex Editor - WEM ID: {self.entry.wem_id}")
+        self.setWindowTitle(f"Onaltılık Düzenleyici - WEM Kimliği: {self.entry.wem_id}")
         self.resize(900, 600)
         self.new_data = None 
         
@@ -318,7 +318,7 @@ class HexEditorDialog(QDialog):
         layout.setContentsMargins(4, 4, 4, 4)
         layout.setSpacing(4)
         
-        info_lbl = QLabel("Sol: HEX | Sağ: ASCII")
+        info_lbl = QLabel("Sol: Onaltılık | Sağ: ASCII")
         info_lbl.setStyleSheet("color: gray; font-size: 10px;")
         info_lbl.setMaximumHeight(15)
         layout.addWidget(info_lbl)
@@ -391,25 +391,25 @@ class HexEditorDialog(QDialog):
             self.new_data = binascii.unhexlify(clean_hex)
             self.accept() 
         except binascii.Error:
-            QMessageBox.critical(self, "Hata", "Geçersiz Hex formatı!")
+            QMessageBox.critical(self, "Hata", "Geçersiz onaltılık biçim!")
         except Exception as e:
             QMessageBox.critical(self, "Hata", f"Dönüştürme hatası: {str(e)}")
 
 # ---------------------------------------------------------------------------
-# 4. GUI MAIN WINDOW (FRONTEND)
+# 4. GRAFİK ARAYÜZ ANA PENCERESİ (ÖN YÜZ)
 # ---------------------------------------------------------------------------
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Python Wwise Multi-BNK/APK Editörü")
+        self.setWindowTitle("WwiseForge - Çoklu BNK/APK Düzenleyici")
         self.resize(1100, 900)
         
         # PENCERE VE UYGULAMA İKONU
-        self.setWindowIcon(QIcon("icon.ico"))
+        self.setWindowIcon(QIcon("simge.ico"))
         
-        self.temp_dir = tempfile.mkdtemp(prefix="bnk_editor_")
-        self.settings = QSettings("MyCompany", "WwiseBnkEditor")
+        self.temp_dir = tempfile.mkdtemp(prefix="wwiseforge_")
+        self.settings = QSettings("WwiseForge", "WwiseForge")
         
         self.apk_work_dir = None
         self.current_apk_dummy = 0
@@ -469,17 +469,17 @@ class MainWindow(QMainWindow):
         top_group.setLayout(top_layout)
         main_layout.addWidget(top_group)
 
-        # --- Orta Panel: Filtreleme ve Tree Widget ---
+        # --- Orta Panel: Filtreleme ve ağaç görünümü ---
         mid_layout = QVBoxLayout()
         
-        # Gelişmiş Filtre (Tümü Kaldırıldı)
+        # Gelişmiş filtre (Tümü seçeneği kaldırıldı)
         filter_layout = QHBoxLayout()
         filter_layout.addWidget(QLabel("Filtre:"))
         
         self.combo_filter_type = QComboBox()
         self.combo_filter_type.addItems([
-            "ID İçinde Ara (Decimal)", 
-            "Hex ID İçinde Ara", 
+            "Kimlik İçinde Ara (Ondalık)", 
+            "Onaltılık Kimlik İçinde Ara", 
             "Sadece Değişenler", 
             "Sadece Orijinaller", 
             "Boyuta Göre Filtrele"
@@ -487,16 +487,16 @@ class MainWindow(QMainWindow):
         self.combo_filter_type.currentIndexChanged.connect(self.on_filter_type_changed)
         
         self.txt_search = QLineEdit()
-        self.txt_search.setPlaceholderText("ID giriniz (Örn: 12345)...") # Default
+        self.txt_search.setPlaceholderText("Kimlik girin (Örnek: 12345)...") # Varsayılan
         self.txt_search.textChanged.connect(self.filter_tree)
         
         filter_layout.addWidget(self.combo_filter_type)
         filter_layout.addWidget(self.txt_search)
         mid_layout.addLayout(filter_layout)
         
-        # Tree Widget
+        # Ağaç görünümü
         self.tree_widget = QTreeWidget()
-        self.tree_widget.setHeaderLabels(["Dosya / ID", "Boyut", "Durum"])
+        self.tree_widget.setHeaderLabels(["Dosya / Kimlik", "Boyut", "Durum"])
         self.tree_widget.setColumnWidth(0, 400)
         self.tree_widget.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.tree_widget.setAlternatingRowColors(True)
@@ -510,7 +510,7 @@ class MainWindow(QMainWindow):
         mid_layout.addWidget(self.tree_widget)
         main_layout.addLayout(mid_layout)
 
-        # --- Alt Panel: Gelişmiş Player ---
+        # --- Alt Panel: Gelişmiş oynatıcı ---
         player_group = QGroupBox("Önizleme")
         player_layout = QVBoxLayout()
         
@@ -562,7 +562,7 @@ class MainWindow(QMainWindow):
         self.btn_batch_replace.setStyleSheet("background-color: #C8E6C9; color: black; font-weight: bold;")
         self.btn_batch_replace.clicked.connect(self.batch_replace_wems)
         
-        self.btn_cue_transfer = QPushButton("Seçili BNK -> CUE Transferi")
+        self.btn_cue_transfer = QPushButton("Seçili BNK -> CUE Aktarımı")
         self.btn_cue_transfer.setStyleSheet("background-color: #FFECB3; color: black; font-weight: bold;")
         self.btn_cue_transfer.clicked.connect(self.batch_transfer_cue_data)
         self.btn_cue_transfer.setEnabled(False)
@@ -587,8 +587,8 @@ class MainWindow(QMainWindow):
             filename = os.path.basename(filepath)
             filename_stem = Path(filepath).stem
             
-            # Alt klasör: .backup/dosya_adi_backups/
-            backup_root = os.path.join(folder, ".backup")
+            # Alt klasör: .yedek/dosya_adi_yedekleri/
+            backup_root = os.path.join(folder, ".yedek")
             if not os.path.exists(backup_root):
                 os.makedirs(backup_root)
                 if os.name == 'nt': subprocess.check_call(["attrib", "+H", backup_root])
@@ -597,7 +597,7 @@ class MainWindow(QMainWindow):
             if not os.path.exists(file_backup_dir):
                 os.makedirs(file_backup_dir)
 
-            # Timestamp ile yedekle
+            # Zaman damgasıyla yedekle
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             backup_name = f"{filename}_{timestamp}"
             backup_path = os.path.join(file_backup_dir, backup_name)
@@ -614,8 +614,8 @@ class MainWindow(QMainWindow):
     def clean_backups(self, backup_dir):
         """Yedekleri sayı ve tarih limitine göre temizler."""
         try:
-            max_count = int(self.settings.value("backup_count", 3))
-            max_age_days = int(self.settings.value("backup_age", 7))
+            max_count = int(self.settings.value("yedek_sayisi", 3))
+            max_age_days = int(self.settings.value("yedek_yasi", 7))
             
             files = []
             for f in os.listdir(backup_dir):
@@ -669,7 +669,7 @@ class MainWindow(QMainWindow):
         folder = os.path.dirname(target_file)
         filename_stem = Path(target_file).stem
         # Alt klasörden bul
-        backup_dir = os.path.join(folder, ".backup", f"{filename_stem}_backups")
+        backup_dir = os.path.join(folder, ".yedek", f"{filename_stem}_backups")
 
         if not os.path.exists(backup_dir) or not os.listdir(backup_dir):
             QMessageBox.warning(self, "Hata", "Bu dosya için yedek bulunamadı.")
@@ -701,11 +701,11 @@ class MainWindow(QMainWindow):
 
     def on_filter_type_changed(self, index):
         txt = self.combo_filter_type.currentText()
-        # Placeholder güncelle
-        if "ID" in txt and "Hex" not in txt:
-            self.txt_search.setPlaceholderText("ID giriniz (Örn: 12345)...")
-        elif "Hex" in txt:
-            self.txt_search.setPlaceholderText("Hex ID giriniz (Örn: 3F2A)...")
+        # Yer tutucu metni güncelle
+        if "Kimlik" in txt and "Onaltılık" not in txt:
+            self.txt_search.setPlaceholderText("Kimlik girin (Örnek: 12345)...")
+        elif "Onaltılık" in txt:
+            self.txt_search.setPlaceholderText("Onaltılık kimlik girin (Örnek: 3F2A)...")
         elif "Boyut" in txt:
             self.txt_search.setPlaceholderText("Örn: >500KB, <2MB, =100B")
         else:
@@ -728,9 +728,9 @@ class MainWindow(QMainWindow):
         return op, limit_bytes
 
     def filter_tree(self, text):
-        # Index mapping: 
-        # 0: ID (Dec) [Tümü Yerine]
-        # 1: Hex ID
+        # Dizin eşlemesi: 
+        # 0: Kimlik (Ondalık) [Tümü seçeneğinin yerine]
+        # 1: Onaltılık kimlik
         # 2: Değişen
         # 3: Orijinal
         # 4: Boyut
@@ -750,10 +750,10 @@ class MainWindow(QMainWindow):
                 entry = child.data(0, Qt.UserRole)
                 show = False
                 
-                if filter_type == 0: # ID Decimal (Eskiden Tümü)
+                if filter_type == 0: # Ondalık kimlik (önceden Tümü)
                     if not search_text: show = True # Boşsa hepsini göster
                     elif search_text in str(entry.wem_id): show = True
-                elif filter_type == 1: # Hex ID
+                elif filter_type == 1: # Onaltılık kimlik
                     hex_id = f"{entry.wem_id:X}"
                     if not search_text: show = True
                     elif search_text.upper() in hex_id: show = True
@@ -780,7 +780,7 @@ class MainWindow(QMainWindow):
                 root.setHidden(False)
                 root.setExpanded(True)
             else:
-                # ID Arama modunda boşken root görünsün
+                # Kimlik arama kipinde alan boşken kök öğe görünsün
                 if filter_type == 0 and not search_text:
                     root.setHidden(False)
                     root.setExpanded(False)
@@ -788,7 +788,7 @@ class MainWindow(QMainWindow):
                     root.setHidden(True)
 
     # -----------------------------------------------------------------------
-    # CORE FONKSİYONLAR
+    # TEMEL İŞLEVLER
     # -----------------------------------------------------------------------
 
     def open_context_menu(self, position):
@@ -797,7 +797,7 @@ class MainWindow(QMainWindow):
         
         if item.parent():
             menu = QMenu()
-            action_hex = QAction("Hex Editor ile Aç", self)
+            action_hex = QAction("Onaltılık Düzenleyici ile Aç", self)
             action_hex.triggered.connect(lambda: self.open_hex_editor(item))
             menu.addAction(action_hex)
             
@@ -812,7 +812,7 @@ class MainWindow(QMainWindow):
         wem_items = [i for i in selected_items if i.parent() is not None]
         if not wem_items: return
         
-        vgm_path = self.settings.value("vgmstream_path")
+        vgm_path = self.settings.value("vgmstream_yolu")
         if not vgm_path or not os.path.exists(vgm_path):
             QMessageBox.warning(self, "Hata", "VGMStream yolu ayarlanmamış!")
             return
@@ -825,7 +825,7 @@ class MainWindow(QMainWindow):
         
         for item in wem_items:
             entry = item.data(0, Qt.UserRole)
-            temp_wem = os.path.join(self.temp_dir, f"export_{entry.wem_id}.wem")
+            temp_wem = os.path.join(self.temp_dir, f"disa_aktarilan_{entry.wem_id}.wem")
             out_wav = os.path.join(save_dir, f"{entry.wem_id}.wav")
             try:
                 with open(temp_wem, 'wb') as f: f.write(entry.data)
@@ -857,7 +857,7 @@ class MainWindow(QMainWindow):
                 if os.path.exists(wav_path):
                     try: os.remove(wav_path)
                     except: pass
-                self.status_bar.showMessage(f"ID {entry.wem_id} Hex Editor ile güncellendi.")
+                self.status_bar.showMessage(f"Kimlik {entry.wem_id} Onaltılık Düzenleyici ile güncellendi.")
 
     def open_settings(self):
         dialog = SettingsDialog(self)
@@ -876,7 +876,7 @@ class MainWindow(QMainWindow):
         self.status_bar.showMessage("Liste temizlendi.")
 
     def load_bnk_files(self):
-        filter_str = "Wwise Dosyaları (*.bnk *.apk);;Wwise Bank (*.bnk);;APK Container (*.apk)"
+        filter_str = "Wwise Dosyaları (*.bnk *.apk);;Wwise Ses Bankası (*.bnk);;APK Kapsayıcısı (*.apk)"
         filepaths, _ = QFileDialog.getOpenFileNames(self, "Dosya Ekle", "", filter_str)
         if not filepaths: return
 
@@ -988,11 +988,11 @@ class MainWindow(QMainWindow):
         self.btn_replace_single.setEnabled(enabled)
 
     # -----------------------------------------------------------------------
-    # PLAYER & CONVERT
+    # OYNATICI VE DÖNÜŞTÜRME
     # -----------------------------------------------------------------------
 
     def convert_and_load_audio(self, entry: WemEntry) -> bool:
-        vgm_path = self.settings.value("vgmstream_path")
+        vgm_path = self.settings.value("vgmstream_yolu")
         if not vgm_path or not os.path.exists(vgm_path):
             QMessageBox.warning(self, "Eksik Ayar", "Lütfen Ayarlar menüsünden 'vgmstream-cli' yolunu seçin.")
             return False
@@ -1013,7 +1013,7 @@ class MainWindow(QMainWindow):
                 try: os.remove(temp_wem)
                 except: pass
             if result.returncode != 0:
-                self.status_bar.showMessage("Decode hatası (VGMStream)")
+                self.status_bar.showMessage("Ses çözme hatası (VGMStream)")
                 return False
             if os.path.exists(temp_wav):
                 self.media_player.setSource(QUrl.fromLocalFile(temp_wav))
@@ -1092,7 +1092,7 @@ class MainWindow(QMainWindow):
         if not entry: return
         parent_item = item.parent()
         parser = parent_item.data(0, Qt.UserRole)
-        filepath, _ = QFileDialog.getOpenFileName(self, "Yeni .wem Seç", "", "WEM (*.wem);;All (*)")
+        filepath, _ = QFileDialog.getOpenFileName(self, "Yeni .wem Seç", "", "WEM (*.wem);;Tüm dosyalar (*)")
         if not filepath: return
         try:
             with open(filepath, 'rb') as f: new_data = f.read()
@@ -1103,7 +1103,7 @@ class MainWindow(QMainWindow):
                 self.stop_audio()
                 wav_path = os.path.join(self.temp_dir, f"{entry.wem_id}.wav")
                 if os.path.exists(wav_path): os.remove(wav_path)
-            self.status_bar.showMessage(f"ID {entry.wem_id} değiştirildi.")
+            self.status_bar.showMessage(f"Kimlik {entry.wem_id} değiştirildi.")
         except Exception as e: QMessageBox.critical(self, "Hata", str(e))
 
     def batch_replace_wems(self):
@@ -1164,11 +1164,11 @@ class MainWindow(QMainWindow):
             parser = root_item.data(0, Qt.UserRole)
             log_lines.append(f"BNK: {parser.filename}")
             for entry in parser.wem_list:
-                # Değişiklik: Artık BNK'nın kendi binary'si değil,
-                # WEM entry'nin kendi binary'si kullanılıyor.
+                # Değişiklik: Artık BNK'nın kendi ikili verisi değil,
+                # WEM girdisinin kendi ikili verisi kullanılıyor.
                 orig_content = entry.data
                 
-                # Türkçe klasörde bu ID ile dosya var mı?
+                # Türkçe klasörde bu kimlikle dosya var mı?
                 target_file = os.path.join(target_path, f"{entry.wem_id}.wem")
                 if not os.path.exists(target_file): continue
                 
@@ -1178,7 +1178,7 @@ class MainWindow(QMainWindow):
                     data_start_orig = orig_content.rfind(DATA_MARKER)
                     
                     if cue_start == -1 or data_start_orig == -1: 
-                        log_lines.append(f"  [ATLANDI] Orijinalde CUE/DATA yok: ID {entry.wem_id}")
+                        log_lines.append(f"  [ATLANDI] Orijinalde CUE/DATA yok: Kimlik {entry.wem_id}")
                         continue
                     
                     copy_chunk = orig_content[cue_start : data_start_orig + len(DATA_MARKER)]
@@ -1187,15 +1187,15 @@ class MainWindow(QMainWindow):
                     with open(target_file, 'rb') as f: target_content = f.read()
                     
                     if CUE_MARKER in target_content: 
-                        log_lines.append(f"  [BİLGİ] Hedefte zaten CUE var: {entry.wem_id}")
+                        log_lines.append(f"  [BİLGİ] Hedefte zaten CUE var: Kimlik {entry.wem_id}")
                         continue
                         
                     data_start_target = target_content.find(DATA_MARKER)
                     if data_start_target == -1: 
-                        log_lines.append(f"  [UYARI] Hedef dosyada DATA yok: {entry.wem_id}")
+                        log_lines.append(f"  [UYARI] Hedef dosyada DATA yok: Kimlik {entry.wem_id}")
                         continue
                     
-                    # 3. Enjekte et
+                    # 3. Veriyi ekle
                     new_content = target_content[:data_start_target] + copy_chunk + target_content[data_start_target + len(DATA_MARKER):]
                     
                     with open(target_file, 'wb') as f: f.write(new_content)
@@ -1204,10 +1204,10 @@ class MainWindow(QMainWindow):
                     log_lines.append(f"  + Güncellendi: {entry.wem_id}.wem")
                     
                 except Exception as e:
-                    log_lines.append(f"  ! Hata {entry.wem_id}: {e}")
+                    log_lines.append(f"  ! Kimlik {entry.wem_id} için hata: {e}")
         
         log_lines.append(f"\nToplam Güncellenen: {total_success}")
-        d = LogResultDialog("Transfer Sonucu", "\n".join(log_lines), self)
+        d = LogResultDialog("Aktarım Sonucu", "\n".join(log_lines), self)
         d.exec()
 
     def save_selected_bnk(self):
@@ -1217,7 +1217,7 @@ class MainWindow(QMainWindow):
         if item.parent(): root_item = item.parent()
         else: root_item = item
         parser = root_item.data(0, Qt.UserRole)
-        save_path, _ = QFileDialog.getSaveFileName(self, "BNK Kaydet", f"mod_{parser.filename}", "Wwise Bank (*.bnk)")
+        save_path, _ = QFileDialog.getSaveFileName(self, "BNK Kaydet", f"duzenlenmis_{parser.filename}", "Wwise Ses Bankası (*.bnk)")
         if save_path:
             try:
                 parser.save_bnk(save_path)
@@ -1229,7 +1229,7 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Hata", "APK çalışma klasörü yok!")
             return
         
-        # Temp klasöre son halleri yaz
+        # Son hâllerini geçici klasöre yaz
         root_count = self.tree_widget.topLevelItemCount()
         for i in range(root_count):
             item = self.tree_widget.topLevelItem(i)
@@ -1238,17 +1238,17 @@ class MainWindow(QMainWindow):
                 try: parser.save_bnk(parser.filepath)
                 except: pass
 
-        out_path, _ = QFileDialog.getSaveFileName(self, "APK Kaydet", "mod.apk", "APK (*.apk)")
+        out_path, _ = QFileDialog.getSaveFileName(self, "APK Kaydet", "duzenlenmis.apk", "APK (*.apk)")
         if out_path:
             try:
                 count, _ = ApkExtractor.repack_from_folder(self.apk_work_dir, out_path, self.current_apk_dummy)
-                QMessageBox.information(self, "Başarılı", f"APK Oluşturuldu! ({count} dosya)")
+                QMessageBox.information(self, "Başarılı", f"APK oluşturuldu! ({count} dosya)")
             except Exception as e: QMessageBox.critical(self, "Hata", str(e))
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
-    app.setWindowIcon(QIcon("icon.ico"))
+    app.setWindowIcon(QIcon("simge.ico"))
     window = MainWindow()
     window.show()
     sys.exit(app.exec())
