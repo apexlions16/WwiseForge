@@ -1,3 +1,4 @@
 Bu dosya, Aşama 0 Windows yayın iş akışını bir kez başlatmak için oluşturulmuştur.
 
 Standart çekme isteği tetikleyicisi etkinleştirildi.
+Sürüm denetimi düzeltmesinden sonra ikinci Windows derlemesi başlatıldı.
