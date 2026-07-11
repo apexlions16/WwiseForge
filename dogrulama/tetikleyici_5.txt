@@ -1,0 +1,1 @@
+Yinelenen iş akışı kaldırıldıktan ve eşzamanlılık kuralı eklendikten sonraki son tetikleyicidir.
