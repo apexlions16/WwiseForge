@@ -1,0 +1,1 @@
+İkinci ve güvenli Qt doğrulama betiğini çalıştırmak için kullanılan tetikleyicidir.
