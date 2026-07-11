@@ -3,6 +3,8 @@ name: Windows sürümü oluşturma
 on:
   workflow_dispatch:
   create:
+  issue_comment:
+    types: [created]
   push:
     tags:
       - "v*"
@@ -23,6 +25,7 @@ concurrency:
 jobs:
   windows-surumu:
     name: Windows EXE oluşturma ve yayımlama
+    if: github.event_name != 'issue_comment' || (github.event.issue.number == 2 && contains(github.event.comment.body, '[AŞAMA-0-YAYINLA]'))
     runs-on: windows-latest
 
     steps:
@@ -47,7 +50,7 @@ jobs:
           $icerik = Get-Content -Path $isAkisi -Raw
           $guncelIcerik = [regex]::Replace(
             $icerik,
-            '(?ms)^  create:\r?\n|^  schedule:\r?\n    - cron: "\*/5 \* \* \* \*"\r?\n',
+            '(?ms)^  create:\r?\n|^  issue_comment:\r?\n    types: \[created\]\r?\n|^  schedule:\r?\n    - cron: "\*/5 \* \* \* \*"\r?\n',
             ''
           )
           Set-Content -Path $isAkisi -Value $guncelIcerik -Encoding utf8
